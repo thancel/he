@@ -1,62 +1,51 @@
-const TempVoice = require('../models/TempVoice');
-const { ChannelType, PermissionFlagsBits } = require('discord.js');
+import TempVoice from '../models/TempVoice.js';
+import { ChannelType, PermissionFlagsBits } from 'discord.js';
 
-module.exports = {
+export default {
   name: 'voiceStateUpdate',
-  async execute(oldState, newState, client) {
-    // User joined a voice channel
-    if (!oldState.channelId && newState.channelId) {
-      const tempVoice = await TempVoice.findOne({ 
-        guildId: newState.guild.id, 
-        channelId: newState.channelId 
-      });
+  async execute(oldState, newState) {
+    try {
+      const tempVoiceData = await TempVoice.findOne({ guildId: newState.guild.id });
       
-      if (tempVoice) {
-        try {
-          const channel = await newState.guild.channels.create({
-            name: `${newState.member.user.username}'s Channel`,
-            type: ChannelType.GuildVoice,
-            parent: newState.channel.parent,
-            userLimit: newState.channel.userLimit,
-            permissionOverwrites: [
-              {
-                id: newState.member.id,
-                allow: [
-                  PermissionFlagsBits.ManageChannels,
-                  PermissionFlagsBits.MoveMembers
-                ]
-              }
-            ]
-          });
-          
-          await newState.member.voice.setChannel(channel);
-          
-          tempVoice.createdChannels.push(channel.id);
-          await tempVoice.save();
-        } catch (err) {
-          console.error('Error creating temp voice:', err);
-        }
+      if (!tempVoiceData) return;
+
+      // User joined the temp voice creator channel
+      if (newState.channelId === tempVoiceData.channelId && !oldState.channelId) {
+        const member = newState.member;
+        
+        const tempChannel = await newState.guild.channels.create({
+          name: ${member.user.username}'s Channel,
+          type: ChannelType.GuildVoice,
+          parent: newState.channel.parent,
+          permissionOverwrites: [
+            {
+              id: member.id,
+              allow: [PermissionFlagsBits.ManageChannels, PermissionFlagsBits.MoveMembers]
+            }
+          ]
+        });
+
+        await member.voice.setChannel(tempChannel);
+        
+        tempVoiceData.createdChannels.push(tempChannel.id);
+        await tempVoiceData.save();
       }
-    }
-    
-    // User left a voice channel
-    if (oldState.channelId && !newState.channelId) {
-      const tempVoice = await TempVoice.findOne({
-        guildId: oldState.guild.id,
-        createdChannels: oldState.channelId
-      });
-      
-      if (tempVoice && oldState.channel.members.size === 0) {
-        try {
-          await oldState.channel.delete();
-          tempVoice.createdChannels = tempVoice.createdChannels.filter(
+
+      // User left a temp voice channel
+      if (oldState.channelId && tempVoiceData.createdChannels.includes(oldState.channelId)) {
+        const channel = oldState.channel;
+        
+        if (channel && channel.members.size === 0) {
+          await channel.delete();
+          
+          tempVoiceData.createdChannels = tempVoiceData.createdChannels.filter(
             id => id !== oldState.channelId
           );
-          await tempVoice.save();
-        } catch (err) {
-          console.error('Error deleting temp voice:', err);
+          await tempVoiceData.save();
         }
       }
+    } catch (error) {
+      console.error('Error in voiceStateUpdate:', error);
     }
   }
 };

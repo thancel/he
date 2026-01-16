@@ -1,12 +1,25 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const userSchema = new mongoose.Schema({
-  userId: { type: String, required: true, unique: true },
-  guildId: { type: String, required: true },
-  balance: { type: Number, default: 0 },
-  dailyStreak: { type: Number, default: 0 },
-  lastDaily: { type: Date, default: null },
-  createdAt: { type: Date, default: Date.now }
+  userId: {
+    type: String,
+    required: true,
+    unique: true
+  },
+  balance: {
+    type: Number,
+    default: 0
+  },
+  lastDaily: {
+    type: Date,
+    default: null
+  },
+  dailyStreak: {
+    type: Number,
+    default: 0
+  }
+}, {
+  timestamps: true
 });
 
-module.exports = mongoose.model('User', userSchema);
+export default mongoose.model('User', userSchema);

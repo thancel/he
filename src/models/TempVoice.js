@@ -1,10 +1,20 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const tempVoiceSchema = new mongoose.Schema({
-  guildId: { type: String, required: true },
-  channelId: { type: String, required: true, unique: true },
-  createdChannels: { type: [String], default: [] },
-  createdAt: { type: Date, default: Date.now }
+  guildId: {
+    type: String,
+    required: true,
+    unique: true
+  },
+  channelId: {
+    type: String,
+    required: true
+  },
+  createdChannels: [{
+    type: String
+  }]
+}, {
+  timestamps: true
 });
 
-module.exports = mongoose.model('TempVoice', tempVoiceSchema);
+export default mongoose.model('TempVoice', tempVoiceSchema);

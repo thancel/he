@@ -1,8 +1,8 @@
-const axios = require('axios');
+import axios from 'axios';
 
 const ANILIST_API = 'https://graphql.anilist.co';
 
-async function searchAnime(query) {
+export async function searchAnime(query) {
   const graphqlQuery = `
     query ($search: String) {
       Page(page: 1, perPage: 10) {
@@ -10,77 +10,59 @@ async function searchAnime(query) {
           id
           title {
             romaji
+            english
             native
           }
-        }
-      }
-    }
-  `;
-  
-  const response = await axios.post(ANILIST_API, {
-    query: graphqlQuery,
-    variables: { search: query }
-  });
-  
-  return response.data.data.Page.media;
-}
-
-async function getAnimeDetails(id) {
-  const graphqlQuery = `
-    query ($id: Int) {
-      Media(id: $id, type: ANIME) {
-        id
-        title {
-          romaji
-          native
-        }
-        description
-        status
-        episodes
-        format
-        duration
-        genres
-        averageScore
-        coverImage {
-          large
-          color
-        }
-        studios {
-          nodes {
-            name
+          description
+          episodes
+          duration
+          format
+          status
+          startDate {
+            year
+            month
+            day
+          }
+          endDate {
+            year
+            month
+            day
+          }
+          averageScore
+          popularity
+          studios {
+            nodes {
+              name
+            }
+          }
+          genres
+          coverImage {
+            large
+          }
+          siteUrl
+          externalLinks {
+            site
+            url
           }
         }
-        startDate {
-          year
-          month
-          day
-        }
-        endDate {
-          year
-          month
-          day
-        }
-        rankings {
-          rank
-          type
-        }
-        externalLinks {
-          url
-          site
-        }
       }
     }
   `;
-  
-  const response = await axios.post(ANILIST_API, {
-    query: graphqlQuery,
-    variables: { id: parseInt(id) }
-  });
-  
-  return response.data.data.Media;
+
+  try {
+    const response = await axios.post(ANILIST_API, {
+      query: graphqlQuery,
+      variables: { search: query }
+    });
+
+    return response.data.data.Page.media;
+  } catch (error) {
+    console.error('Error fetching anime from AniList:', error);
+    return [];
+  }
 }
 
-async function searchManga(query) {
+export async function searchManga(query) {
   const graphqlQuery = `
     query ($search: String) {
       Page(page: 1, perPage: 10) {
@@ -88,81 +70,113 @@ async function searchManga(query) {
           id
           title {
             romaji
+            english
             native
           }
-        }
-      }
-    }
-  `;
-  
-  const response = await axios.post(ANILIST_API, {
-    query: graphqlQuery,
-    variables: { search: query }
-  });
-  
-  return response.data.data.Page.media;
-}
-
-async function getMangaDetails(id) {
-  const graphqlQuery = `
-    query ($id: Int) {
-      Media(id: $id, type: MANGA) {
-        id
-        title {
-          romaji
-          native
-        }
-        description
-        status
-        chapters
-        volumes
-        format
-        genres
-        averageScore
-        countryOfOrigin
-        coverImage {
-          large
-          color
-        }
-        staff {
-          edges {
-            role
-            node {
-              name {
-                full
+          description
+          chapters
+          volumes
+          format
+          status
+          startDate {
+            year
+            month
+            day
+          }
+          endDate {
+            year
+            month
+            day
+          }
+          averageScore
+          popularity
+          staff {
+            edges {
+              role
+              node {
+                name {
+                  full
+                }
               }
             }
           }
-        }
-        startDate {
-          year
-          month
-          day
-        }
-        endDate {
-          year
-          month
-          day
-        }
-        externalLinks {
-          url
-          site
+          genres
+          coverImage {
+            large
+          }
+          siteUrl
+          externalLinks {
+            site
+            url
+          }
         }
       }
     }
   `;
-  
-  const response = await axios.post(ANILIST_API, {
-    query: graphqlQuery,
-    variables: { id: parseInt(id) }
-  });
-  
-  return response.data.data.Media;
+
+  try {
+    const response = await axios.post(ANILIST_API, {
+      query: graphqlQuery,
+      variables: { search: query }
+    });
+
+    return response.data.data.Page.media;
+  } catch (error) {
+    console.error('Error fetching manga from AniList:', error);
+    return [];
+  }
 }
 
-module.exports = {
-  searchAnime,
-  getAnimeDetails,
-  searchManga,
-  getMangaDetails
-};
+export function formatDate(dateObj) {
+  if (!dateObj || !dateObj.year) return 'N/A';
+  const year = dateObj.year;
+  const month = String(dateObj.month || 1).padStart(2, '0');
+  const day = String(dateObj.day || 1).padStart(2, '0');
+  return `${year}/${month}/${day}`;
+}
+
+export function cleanDescription(description) {
+  if (!description) return 'No description available.';
+  
+  // Remove HTML tags
+  let cleaned = description.replace(/<[^>]*>/g, '');
+  
+  // Replace multiple newlines with single newline
+  cleaned = cleaned.replace(/\n\n+/g, '\n');
+  
+  // Truncate if too long
+  if (cleaned.length > 400) {
+    cleaned = cleaned.substring(0, 397) + '...';
+  }
+  
+  return cleaned;
+}
+
+export function getStatusEmoji(status) {
+  const statusMap = {
+    'FINISHED': 'Finished',
+    'RELEASING': 'Ongoing',
+    'NOT_YET_RELEASED': 'Not Yet Released',
+    'CANCELLED': 'Cancelled',
+    'HIATUS': 'Hiatus'
+  };
+  return statusMap[status] || status;
+}
+
+export function getFormatName(format) {
+  const formatMap = {
+    'TV': 'TV',
+    'TV_SHORT': 'TV Short',
+    'MOVIE': 'Movie',
+    'SPECIAL': 'Special',
+    'OVA': 'OVA',
+    'ONA': 'ONA',
+    'MUSIC': 'Music',
+    'MANGA': 'Manga',
+    'NOVEL': 'Light Novel',
+    'ONE_SHOT': 'One Shot',
+    'MANHWA': 'Manhwa',
+    'MANHUA': 'Manhua'
+  };
+  return formatMap[format] || format;
+}
