@@ -1,6 +1,6 @@
 import { readdirSync } from 'fs';
 import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { fileURLToPath, pathToFileURL } from 'url';
 import { REST, Routes } from 'discord.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -16,12 +16,18 @@ export async function loadCommands(client) {
 
     for (const file of commandFiles) {
       const filePath = join(folderPath, file);
-      const command = await import(ile://);
+      const fileUrl = pathToFileURL(filePath).href;
       
-      if (command.default?.data && command.default?.execute) {
-        client.commands.set(command.default.data.name, command.default);
-        commands.push(command.default.data.toJSON());
-        console.log(✅ Loaded command: );
+      try {
+        const command = await import(fileUrl);
+        
+        if (command.default?.data && command.default?.execute) {
+          client.commands.set(command.default.data.name, command.default);
+          commands.push(command.default.data.toJSON());
+          console.log(`✅ Loaded command: ${command.default.data.name}`);
+        }
+      } catch (error) {
+        console.error(`❌ Error loading command ${file}:`, error);
       }
     }
   }
@@ -29,7 +35,7 @@ export async function loadCommands(client) {
   const rest = new REST().setToken(process.env.DISCORD_TOKEN);
   
   try {
-    console.log(🔄 Refreshing  slash commands...);
+    console.log(`🔄 Refreshing ${commands.length} slash commands...`);
     await rest.put(
       Routes.applicationCommands(process.env.CLIENT_ID),
       { body: commands }
